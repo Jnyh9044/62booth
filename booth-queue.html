@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>축제 부스 대기 관리</title>
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+--bg:#fff8f0;--card:#fff;--ink:#2b2118;--mute:#7a6a5c;--line:#eadfd2;--accent:#ff6b35;--accent-ink:#fff;--ok:#1f9d63;--warn:#d98a00;--bad:#d64545}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;--bg:#1b1511;--card:#271e18;--ink:#f6ece2;--mute:#b3a495;--line:#3a2e25;--accent:#ff7f50;--accent-ink:#1b1511;--ok:#4cc38a;--warn:#f0b43c;--bad:#ff7b7b}}
+:root[data-theme="dark"]{color-scheme:dark;--bg:#1b1511;--card:#271e18;--ink:#f6ece2;--mute:#b3a495;--line:#3a2e25;--accent:#ff7f50;--accent-ink:#1b1511;--ok:#4cc38a;--warn:#f0b43c;--bad:#ff7b7b}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Pretendard","Noto Sans KR","Apple SD Gothic Neo","Malgun Gothic",sans-serif;line-height:1.5}
+header{padding:20px 16px 8px;max-width:720px;margin:0 auto}
+h1{margin:0;font-size:22px}
+header p{margin:4px 0 0;color:var(--mute);font-size:14px}
+main{max-width:720px;margin:0 auto;padding:12px 16px 40px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:12px}
+h2{margin:0 0 10px;font-size:16px}
+input,textarea{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;font:inherit;background:var(--bg);color:var(--ink);margin-bottom:8px;resize:vertical}
+.btn{padding:12px 16px;border:0;border-radius:10px;background:var(--accent);color:var(--accent-ink);font:inherit;font-weight:700;cursor:pointer}
+.btn.sub{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.btn.sm{padding:6px 10px;font-size:13px}
+.btn.full{width:100%}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.hint{font-size:13px;margin:0 0 8px;min-height:20px;color:var(--mute)}
+.hint.rev{color:var(--warn);font-weight:700}
+.big{text-align:center;padding:24px 8px}
+.big .lbl{color:var(--mute);font-size:14px}
+.big .num{font-size:88px;font-weight:800;color:var(--accent);line-height:1.1}
+.big .who{font-size:15px;color:var(--mute);min-height:22px}
+.stats{display:flex;gap:8px;margin-bottom:12px}
+.stats div{flex:1;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px;text-align:center}
+.stats b{display:block;font-size:22px}
+.stats span{font-size:12px;color:var(--mute)}
+.t{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 0;border-top:1px solid var(--line)}
+.t:first-child{border-top:0}
+.t .n{font-weight:800;font-size:18px;min-width:44px}
+.t .m{flex:1;min-width:0;font-size:14px;word-break:keep-all}
+.t .m small{color:var(--mute);display:block}
+.tag{display:inline-block;font-size:11px;padding:2px 7px;border-radius:99px;border:1px solid var(--line);margin-left:4px}
+.s-called{color:var(--accent);font-weight:700}.s-done{color:var(--ok)}.s-skipped,.s-cancel{color:var(--bad)}
+.empty{color:var(--mute);text-align:center;padding:16px}
+</style>
+</head>
+<body>
+<header>
+  <h1>🎪 축제 부스 대기 관리</h1>
+  <p>팀 단위 대기번호 · 중복 등록 체크 · 호출 관리</p>
+</header>
+<main>
+  <div class="stats">
+    <div><b id="stW">0</b><span>대기 중 팀</span></div>
+    <div><b id="stD">0</b><span>입장 완료 팀</span></div>
+    <div><b id="stV">0</b><span>총 등록 인원</span></div>
+  </div>
+
+  <div class="card">
+    <h2>대기번호 발급 (한 팀)</h2>
+    <textarea id="name" rows="2" placeholder="팀원 이름을 모두 입력 (예: 3반김철수 2반이영희 1반박민수)" autocomplete="off"></textarea>
+    <input id="memo" placeholder="메모 (선택)" autocomplete="off">
+    <p class="hint" id="hint">“3반김철수”처럼 반+성+이름으로, 띄어쓰기나 쉼표로 구분해 여러 명을 적어 주세요.</p>
+    <button class="btn full" id="issue">팀 번호 발급하기</button>
+  </div>
+
+  <div class="card big">
+    <div class="lbl">현재 호출 번호</div>
+    <div class="num" id="curNum">-</div>
+    <div class="who" id="curWho"></div>
+    <div class="row" style="justify-content:center;margin-top:8px">
+      <button class="btn" id="callNext">다음 팀 호출 ▶</button>
+      <button class="btn sub" id="doneCur">입장 완료</button>
+      <button class="btn sub" id="skipCur">부재 (건너뛰기)</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>대기 목록</h2>
+    <div id="list"></div>
+  </div>
+
+  <div class="card">
+    <h2>전체 기록</h2>
+    <div id="history"></div>
+    <div class="row" style="margin-top:12px">
+      <button class="btn sub sm" id="exportBtn">CSV 내보내기</button>
+      <button class="btn sub sm" id="resetBtn">전체 초기화</button>
+    </div>
+  </div>
+</main>
+
+<script>
+(function(){
+  var KEY = "booth_queue_v2";
+  var S = { next: 1, current: null, tickets: [] };
+  try { var raw = localStorage.getItem(KEY); if (raw) S = JSON.parse(raw); } catch(e){}
+
+  function save(){ try { localStorage.setItem(KEY, JSON.stringify(S)); } catch(e){} }
+  function $(id){ return document.getElementById(id); }
+  function waiting(){ return S.tickets.filter(function(t){ return t.status==="waiting"; }); }
+  function find(n){ return S.tickets.filter(function(t){ return t.n===n; })[0]; }
+  function timeStr(ts){ var d=new Date(ts); return ("0"+d.getHours()).slice(-2)+":"+("0"+d.getMinutes()).slice(-2); }
+  var LBL = { waiting:"대기", called:"호출됨", done:"완료", skipped:"부재", cancel:"취소" };
+  function el(tag, cls, text){ var e=document.createElement(tag); if(cls) e.className=cls; if(text!=null) e.textContent=text; return e; }
+
+  // 입력 파싱: "3반김철수 2반이영희, 1반박민수" -> 이름 목록
+  function parse(text){
+    var re = /(\d{1,2})\s*반\s*([^\s,，、;\/\d]{2,})/g, people = [], m;
+    var rest = text.replace(re, function(all, c, nm){ people.push({ key: c+"반"+nm, label: c+"반"+nm }); return " "; });
+    var leftover = rest.replace(/[\s,，、;\/]+/g, "");
+    return { people: people, bad: leftover.length > 0 };
+  }
+  function activeKeys(){
+    var set = {};
+    S.tickets.forEach(function(t){ if(t.status!=="cancel") (t.names||[]).forEach(function(n){ set[n] = t.n; }); });
+    return set;
+  }
+  function check(text){
+    var p = parse(text), taken = activeKeys(), dups = [], seen = {}, selfDup = [];
+    p.people.forEach(function(x){
+      if(taken[x.key]) dups.push(x.label);
+      if(seen[x.key]) selfDup.push(x.label);
+      seen[x.key] = 1;
+    });
+    return { p: p, dups: dups, selfDup: selfDup };
+  }
+
+  function render(){
+    var w = waiting();
+    $("stW").textContent = w.length;
+    $("stD").textContent = S.tickets.filter(function(t){return t.status==="done";}).length;
+    $("stV").textContent = S.tickets.reduce(function(a,t){ return a + (t.status==="cancel" ? 0 : (t.names||[]).length); }, 0);
+    var ct = S.current && find(S.current);
+    $("curNum").textContent = S.current ? String(S.current) : "-";
+    $("curWho").textContent = ct ? ct.names.join(", ") : "";
+
+    var list = $("list"); list.textContent = "";
+    if(!w.length) list.appendChild(el("div","empty","대기 중인 팀이 없어요"));
+    w.forEach(function(t, i){
+      var r = el("div","t");
+      r.appendChild(el("div","n", t.n));
+      var m = el("div","m", t.names.join(", "));
+      m.appendChild(el("span","tag", t.names.length+"명"));
+      m.appendChild(el("small","", (i+1)+"번째 · "+timeStr(t.at)+(t.memo?" · "+t.memo:"")));
+      r.appendChild(m);
+      var b1 = el("button","btn sub sm","호출"); b1.onclick=function(){ callNum(t.n); };
+      var b2 = el("button","btn sub sm","취소"); b2.onclick=function(){ t.status="cancel"; save(); render(); };
+      r.appendChild(b1); r.appendChild(b2);
+      list.appendChild(r);
+    });
+
+    var h = $("history"); h.textContent = "";
+    if(!S.tickets.length) h.appendChild(el("div","empty","아직 기록이 없어요"));
+    S.tickets.slice().reverse().forEach(function(t){
+      var r = el("div","t");
+      r.appendChild(el("div","n", t.n));
+      var m = el("div","m", t.names.join(", "));
+      m.appendChild(el("small","", timeStr(t.at)+" · "+t.names.length+"명"));
+      r.appendChild(m);
+      r.appendChild(el("span","s-"+t.status, LBL[t.status]));
+      h.appendChild(r);
+    });
+  }
+
+  function callNum(n){
+    var prev = S.current && find(S.current);
+    if(prev && prev.status==="called") prev.status="done";
+    var t = find(n); if(!t) return;
+    t.status="called"; S.current=n; save(); render();
+  }
+
+  function setHint(msg, warn){ var h=$("hint"); h.className = "hint" + (warn?" rev":""); h.textContent = msg; }
+
+  $("name").oninput = function(){
+    var v = this.value;
+    if(!v.trim()){ setHint("“3반김철수”처럼 반+성+이름으로, 띄어쓰기나 쉼표로 구분해 여러 명을 적어 주세요."); return; }
+    var c = check(v);
+    if(c.dups.length) setHint("⚠ 이미 등록된 사람이에요: " + c.dups.join(", "), true);
+    else if(c.selfDup.length) setHint("⚠ 같은 사람이 두 번 적혀 있어요: " + c.selfDup.join(", "), true);
+    else if(c.p.bad) setHint("형식을 확인해 주세요. 예: 3반김철수 2반이영희", true);
+    else if(!c.p.people.length) setHint("형식을 확인해 주세요. 예: 3반김철수", true);
+    else setHint("✓ " + c.p.people.length + "명 인식됨 · 등록 가능해요");
+  };
+
+  $("issue").onclick = function(){
+    var v = $("name").value, memo = $("memo").value.trim();
+    var c = check(v);
+    if(!c.p.people.length || c.p.bad){ setHint("형식을 확인해 주세요. 예: 3반김철수 2반이영희", true); return; }
+    if(c.dups.length){ var msg = "이미 등록된 사람이에요: " + c.dups.join(", "); setHint("⚠ "+msg, true); alert(msg); return; }
+    if(c.selfDup.length){ setHint("⚠ 같은 사람이 두 번 적혀 있어요: " + c.selfDup.join(", "), true); return; }
+    var t = { n:S.next++, names:c.p.people.map(function(x){return x.key;}), memo:memo, status:"waiting", at:Date.now() };
+    S.tickets.push(t); save();
+    $("name").value=""; $("memo").value="";
+    setHint("발급 완료! " + t.n + "번 팀 (" + t.names.length + "명) · 앞에 " + (waiting().length-1) + "팀");
+    render();
+  };
+
+  $("callNext").onclick = function(){
+    var w = waiting(); if(!w.length){ alert("대기 중인 팀이 없어요."); return; }
+    callNum(w[0].n);
+  };
+  $("doneCur").onclick = function(){
+    var t = S.current && find(S.current); if(t){ t.status="done"; save(); render(); }
+  };
+  $("skipCur").onclick = function(){
+    var t = S.current && find(S.current); if(t){ t.status="skipped"; S.current=null; save(); render(); }
+  };
+
+  $("exportBtn").onclick = function(){
+    var rows = ["번호,팀원,인원,메모,상태,시각"];
+    S.tickets.forEach(function(t){
+      rows.push([t.n,'"'+t.names.join(" ")+'"',t.names.length,'"'+(t.memo||"").replace(/"/g,'""')+'"',LBL[t.status],timeStr(t.at)].join(","));
+    });
+    var blob = new Blob(["\ufeff"+rows.join("\n")], {type:"text/csv"});
+    var a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download="booth-queue.csv";
+    document.body.appendChild(a); a.click(); a.remove();
+  };
+
+  $("resetBtn").onclick = function(){
+    if(confirm("모든 대기번호와 등록 기록이 지워져요. 정말 초기화할까요?")){
+      S = { next:1, current:null, tickets:[] }; save(); render();
+    }
+  };
+
+  render();
+})();
+</script>
+</body>
+</html>
